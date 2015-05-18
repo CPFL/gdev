@@ -31,6 +31,8 @@
 
 #include "gdev_device.h"
 #include "gdev_conf.h"
+#include <envytools/nva.h>
+#include <inttypes.h>
 
 /* static objects. */
 static struct gdev_compute gdev_compute_nvc0;
@@ -83,10 +85,56 @@ static void __nvc0_launch_debug_print(struct gdev_kernel *kernel)
 }
 #endif
 
+static int setup_handler(struct gdev_mem *handler)
+{
+	uint32_t *map = NULL;
+	map = (uint32_t*)handler->map;
+	if (!map)
+		return -ENOMEM;
+
+	if (true) {
+		/* RTT */
+		map[0] = 0x00000007;
+		map[1] = 0xa0000000;
+	} else {
+		/* BPT PAUSE */
+		map[0] = 0x00008007;
+		map[1] = 0xd0000000;
+		/* RTT */
+		map[2] = 0x00000007;
+		map[3] = 0xa0000000;
+	}
+	return 0;
+}
+
 static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
 {
 	int x;
 	uint32_t cache_split;
+
+	/* handler setup. */
+	if (!ctx->handler) {
+		int result = 0;
+		int count = 0;
+		while (count < 100) {
+			struct gdev_mem* handler = gdev_mem_alloc(ctx->vas, 0x1000, GDEV_MEM_DEVICE);
+			if (!handler)
+				return -ENOMEM;
+			if (handler->addr < k->code_addr) {
+				++count;
+				continue;
+			}
+			ctx->handler = handler;
+			result = setup_handler(handler);
+			if (result)
+				return result;
+			break;
+		}
+		if (count >= 100) {
+			GDEV_PRINT("Cannot allocate appropriate memory for handler.\n");
+			return -ENOMEM;
+		}
+	}
 
 	/* setup cache_split so that it'll allow 3 blocks (16 warps each) per 
 	   SM for maximum occupancy. */
@@ -186,6 +234,17 @@ static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
 	/* constant memory flush. */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x1698, 1);
 	__gdev_out_ring(ctx, 0x1000); /* FLUSH: 0x1000 = FLUSH_CB */
+
+	/* register handler. */
+	if (ctx->handler) {
+		unsigned gpc_base = 0x418000;
+		unsigned tpc_base = gpc_base + 0x1800;
+		unsigned mp_base = tpc_base + 0x600;
+		int32_t handler_offset = (int32_t)(ctx->handler->addr - k->code_addr);
+		/* FIXME: handler_offset may exceed 32bit range. */
+		nva_wr32(0, mp_base + 0x58, handler_offset);
+		GDEV_PRINT("code:(%" PRIx64 "),handler:(%" PRIx64 "),offset(%" PRIx32 ")\n", k->code_addr, ctx->handler->addr, handler_offset);
+	}
 
 	/* grid/block setup. */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x238, 2);

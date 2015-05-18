@@ -175,6 +175,7 @@ struct gdev_ctx {
 	    uint32_t *map;
 	    uint32_t addr;
 	} desc; /* compute desc struct. But really, need to structure for each launch grid */
+	struct gdev_mem *handler;  /* handler for pgraph if necessary */
 };
 
 /**
