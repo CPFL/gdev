@@ -71,6 +71,13 @@ IF(user)
         ${PROJECT_SOURCE_DIR}/common/gdev_list.h
         ${PROJECT_SOURCE_DIR}/common/gdev_time.h
         ${PROJECT_BINARY_DIR}/gdev_autogen.h)
+    LINK_DIRECTORY_IF_EXISTS(/usr/local/lib)
+    FIND_LIBRARY(PCIACCESS pciaccess REQUIRED)
+    LIST(APPEND link_lib
+        envy
+        nva
+        nvhw
+        ${PCIACCESS})
 ELSE(user)
     MESSAGE(Selected\ Kernel-space!)
     SET(gdev_src ${gdev_src} ${kernel_src})
