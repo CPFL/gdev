@@ -372,26 +372,6 @@ void gdev_raw_vas_free(struct gdev_vas *vas)
     	FREE(vas);
 }
 
-static int gdev_raw_ctx_enable_debugging(struct gdev_ctx *ctx)
-{
-	unsigned i, j;
-	if (nva_init())
-		return -ENODEV;
-
-	unsigned gpcs  = nva_rd32(0, 0x409604) & 0xff;
-	for (i = 0; i < gpcs; ++i) {
-		unsigned gpc_base = 0x500000 + 0x8000 * i;
-		unsigned tpcs = nva_rd32(0, 0x502608 + i * 0x8000) & 0xff;
-		for (j = 0; j < tpcs; ++j) {
-			unsigned tpc_base = gpc_base + 0x4000 + 0x800 * j;
-			unsigned mp_base = tpc_base + 0x600;
-			nva_wr32(0, mp_base + 0x10, 0x1);
-			GDEV_PRINT("GPC:(%u),TPC:(%u),BASE:(%x),MP:(%x),BPT:(%x)\n", i, j, tpc_base, mp_base, nva_rd32(0, mp_base + 0x10));
-		}
-	}
-	return 0;
-}
-
 /* create a new GPU context object. 
    there are not many to do here, as we have already allocated a channel
    object in gdev_vas_new(), i.e., @vas holds it. */
@@ -532,11 +512,6 @@ struct gdev_ctx *gdev_raw_ctx_new(struct gdev_device *gdev, struct gdev_vas *vas
 
 	ctx->pdata = (void *)ctx_objects;
 
-	/* configure bpt registers to enable the debugging mode.
-	 * TODO: This should be done in the driver side ideally. */
-	if (gdev_raw_ctx_enable_debugging(ctx))
-		goto fail_debugging_mode;
-
 	/* compute desc struct. 
 	 * In fact, it must be created for each kernel launch.
 	 * need fix.
@@ -570,7 +545,6 @@ struct gdev_ctx *gdev_raw_ctx_new(struct gdev_device *gdev, struct gdev_vas *vas
 
 fail_desc_map:
 	nouveau_bo_ref(NULL, (struct nouveau_bo **)&desc_bo);
-fail_debugging_mode:
 fail_desc:
 	nouveau_object_del(&comp);
 fail_comp:

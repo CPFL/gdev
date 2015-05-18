@@ -648,7 +648,7 @@ struct gdev_handle *gopen(int minor)
 		goto fail_se;
 	}
 #endif
-	
+
 	/* now other users can access the GPU. */
 	gdev_block_end(gdev);
 
