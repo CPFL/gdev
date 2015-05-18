@@ -32,14 +32,14 @@ ENDMACRO()
 include(ExternalProject)
 ExternalProject_Add(
     envytools
-    URL https://github.com/envytools/envytools/tarball/64a2605897a3ad6b37e587337bfb05e770129e37
-    DOWNLOAD_NAME envytools.tar.gz
+    URL https://github.com/envytools/envytools/archive/64a2605897a3ad6b37e587337bfb05e770129e37.tar.gz
+    # DOWNLOAD_NAME envytools.tar.gz
     # GIT_REPOSITORY https://github.com/envytools/envytools.git
     # GIT_TAG 64a2605897a3ad6b37e587337bfb05e770129e37
     TIMEOUT 10
     UPDATE_COMMAND ""
     PATCH_COMMAND ""
-    CONFIGURE_COMMAND cmake -H<SOURCE_DIR>/. -B<BINARY_DIR> -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_C_FLAGS="-fPIC" -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
+    CONFIGURE_COMMAND cmake -H<SOURCE_DIR>/. -B<BINARY_DIR> -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_C_FLAGS=-fPIC -DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>
     BUILD_COMMAND make -C <BINARY_DIR>
     INSTALL_COMMAND make  -C <BINARY_DIR> install
     INSTALL_DIR ${PROJECT_BINARY_DIR}
