@@ -188,9 +188,9 @@ int cuda_test_mmul(unsigned int n, char *path)
 		return -1;
 	}
 
-	dump_bpt();
 	res = cuCtxCreate(&ctx, 0, dev);
 	dump_bpt();
+	printf("\n\n");
 	// enable_debugging();
 	dump_bpt();
 	if (res != CUDA_SUCCESS) {
@@ -368,7 +368,7 @@ int cuda_test_mmul(unsigned int n, char *path)
 
 
 	printf("prev trigger\n");
-	trigger();
+	// trigger();
 	printf("trigger!\n");
 
 

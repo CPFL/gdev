@@ -92,7 +92,7 @@ static int setup_handler(struct gdev_mem *handler)
 	if (!map)
 		return -ENOMEM;
 
-	if (true) {
+	if (false) {
 		/* RTT */
 		map[0] = 0x00000007;
 		map[1] = 0xa0000000;
@@ -572,7 +572,8 @@ static void nvc0_init(struct gdev_ctx *ctx)
 
 	/* configure bpt registers to enable the debugging mode.
 	 * TODO: This should be done in the driver side ideally. */
-	nvc0_enable_debugging(ctx);
+	nva_init();
+	// nvc0_enable_debugging(ctx);
 }
 
 static struct gdev_compute gdev_compute_nvc0 = {

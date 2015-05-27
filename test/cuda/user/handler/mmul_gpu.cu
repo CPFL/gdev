@@ -8,7 +8,7 @@ extern "C" __global__ void multiply(unsigned int *a, unsigned int *b, unsigned i
 	int row = blockIdx.y * blockDim.y + threadIdx.y;
 	int col = blockIdx.x * blockDim.x + threadIdx.x;
 
-	// asm("brkpt;");
+	asm volatile("brkpt;");
 
 	if(row < n && col < n){
 	    for (i = 0; i < n; i++)
