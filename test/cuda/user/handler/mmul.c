@@ -368,7 +368,7 @@ int cuda_test_mmul(unsigned int n, char *path)
 
 
 	printf("prev trigger\n");
-	// trigger();
+	trigger();
 	printf("trigger!\n");
 
 
