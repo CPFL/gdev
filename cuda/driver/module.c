@@ -112,6 +112,14 @@ CUresult cuModuleLoad(CUmodule *module, const char *fname)
 		goto fail_gmalloc_code;
 	}
 
+	/* module's code address must be within 32bit range.
+	 * TODO: Mesa allocates large heap at first (256KB) and allocate code from that heap.
+	 */
+	if ((mod->code_addr + mod->code_size) > UINT32_MAX) {
+		GDEV_PRINT("Code addr need to be within 32bit address space\n");
+		goto fail_32bit_code;
+	}
+
 	/* locate the code information for each kernel. */
 	if ((res = gdev_cuda_locate_code(mod)) != CUDA_SUCCESS) {
 		GDEV_PRINT("Failed to locate code\n");
@@ -154,6 +162,7 @@ fail_gmemcpy_code:
 fail_memcpy_code:
 	FREE(bnc_buf);
 fail_malloc_code:
+fail_32bit_code:
 fail_locate_code:
 	gfree(handle, mod->code_addr);
 fail_gmalloc_code:

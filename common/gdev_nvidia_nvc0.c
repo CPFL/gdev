@@ -123,11 +123,8 @@ static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
 	__gdev_out_ring(ctx, 0x0001); /* FLUSH: 0x0001 = FLUSH_CODE */
 
 	/* code setup. */
-	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x1608, 2);
-	__gdev_out_ring(ctx, k->code_addr >> 32); /* CODE_ADDRESS_HIGH */
-	__gdev_out_ring(ctx, k->code_addr); /* CODE_ADDRESS_LOW */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x3b4, 1);
-	__gdev_out_ring(ctx, k->code_pc); /* CP_START_ID */
+	__gdev_out_ring(ctx, (k->code_addr + k->code_pc)); /* CP_START_ID */
 
 	/* constant memory setup. this is a bit tricky:
 	   we set the constant memory size and address first. we next set
@@ -488,6 +485,13 @@ static void nvc0_init(struct gdev_ctx *ctx)
 	__gdev_out_ring(ctx, 0); /* TSC_ADDRESS_LOW */
 	__gdev_out_ring(ctx, 0x3ff); /* TSC_LIMIT */
 #endif
+
+	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x1608, 2);
+	__gdev_out_ring(ctx, 0x0); /* CODE_ADDRESS_HIGH */
+	__gdev_out_ring(ctx, 0x0); /* CODE_ADDRESS_LOW */
+
+	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x1698, 1);
+	__gdev_out_ring(ctx, 0x0001); /* FLUSH: 0x0001 = FLUSH_CODE */
 
 	__gdev_fire_ring(ctx);
 }
