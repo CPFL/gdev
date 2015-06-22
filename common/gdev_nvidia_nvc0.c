@@ -202,7 +202,7 @@ static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
 	
 	/* launch preliminary setup. */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x780, 1);
-	__gdev_out_ring(ctx, k->grid_id); /* GRIDID */
+	__gdev_out_ring(ctx, ctx->grid_id++); /* GRIDID */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x36c, 1);
 	__gdev_out_ring(ctx, 0); /* ??? */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x1698, 1);
@@ -405,6 +405,8 @@ static void nvc0_init(struct gdev_ctx *ctx)
 	uint64_t mp_limit;
 	struct gdev_vas *vas = ctx->vas;
 	struct gdev_device *gdev = vas->gdev;
+
+	ctx->grid_id = 0;
 
 	/* initialize the fence values. */
 	for (i = 0; i < GDEV_FENCE_COUNT; i++)
