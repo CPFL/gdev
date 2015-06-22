@@ -100,6 +100,43 @@ uint32_t gdev_launch(struct gdev_ctx *ctx, struct gdev_kernel *kern)
 	return seq;
 }
 
+/* launch the kernel onto the GPU asynchronously. */
+uint32_t gdev_launch_async(struct gdev_ctx *ctx, struct gdev_stream* stream, struct gdev_kernel *kern)
+{
+	struct gdev_vas *vas = ctx->vas;
+	struct gdev_device *gdev = vas->gdev;
+	struct gdev_mem *dev_swap = gdev_swap_get(gdev);
+	struct gdev_compute *compute = gdev_compute_get(gdev);
+	uint32_t seq;
+
+	/* evict data saved in device swap memory space to host memory. */
+	if (dev_swap && dev_swap->shm->holder) {
+		struct gdev_mem *mem = dev_swap->shm->holder;
+		gdev_shm_evict_conflict(ctx, mem->swap_mem); /* don't use gdev->swap */
+		dev_swap->shm->holder = NULL;
+	}
+
+	if (++ctx->fence.seq == GDEV_FENCE_COUNT)
+		ctx->fence.seq = 1;
+	seq = ctx->fence.seq;
+
+	/* compute->membar(ctx); */
+	/* it's important to emit a fence *after* launch():
+	   the LAUNCH method of the PGRAPH engine is not associated with
+	   the QUERY method, i.e., we have to submit the QUERY method 
+	   explicitly after the kernel is launched. */
+	compute->fence_reset(ctx, seq);
+	compute->launch_async(ctx, stream, kern);
+	compute->fence_write(ctx, GDEV_OP_COMPUTE, seq);
+
+#ifndef GDEV_SCHED_DISABLED
+	/* set an interrupt to be caused when compute done. */
+	compute->notify_intr(ctx);
+#endif
+
+	return seq;
+}
+
 /* copy data of @size from @src_addr to @dst_addr. */
 uint32_t gdev_memcpy(struct gdev_ctx *ctx, uint64_t dst_addr, uint64_t src_addr, uint32_t size)
 {

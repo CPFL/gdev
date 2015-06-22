@@ -1125,6 +1125,33 @@ int glaunch(struct gdev_handle *h, struct gdev_kernel *kernel, uint32_t *id)
 }
 
 /**
+ * glaunch_async():
+ * launch the GPU kernel code asynchronously.
+ */
+int glaunch_async(struct gdev_handle *h, struct gdev_stream* stream, struct gdev_kernel *kernel, uint32_t *id)
+{
+#ifndef GDEV_SCHED_DISABLED
+	struct gdev_sched_entity *se = h->se;
+#endif
+	gdev_vas_t *vas = h->vas;
+	gdev_ctx_t *ctx = h->ctx;
+
+#ifndef GDEV_SCHED_DISABLED
+	/* decide if the context needs to stall or not. */
+	gdev_schedule_compute(se);
+#endif
+
+	gdev_mem_lock_all(vas);
+
+	gdev_shm_retrieve_swap_all(ctx, vas); /* get all data swapped back! */
+	*id = gdev_launch_async(ctx, stream, kernel);
+
+	gdev_mem_unlock_all(vas); /* this should be called when compute done... */
+
+	return 0;
+}
+
+/**
  * gsync():
  * poll until the GPU becomes available.
  * @timeout is a unit of milliseconds.

@@ -64,6 +64,7 @@ int gmemcpy_user_from_device_async(Ghandle h, void *dst_buf, uint64_t src_addr, 
 int gmemcpy(Ghandle h, uint64_t dst_addr, uint64_t src_addr, uint64_t size);
 int gmemcpy_async(Ghandle h, uint64_t dst_addr, uint64_t src_addr, uint64_t size, uint32_t *id);
 int glaunch(Ghandle h, struct gdev_kernel *kernel, uint32_t *id);
+int glaunch_async(Ghandle h, Gstream stream, struct gdev_kernel *kernel, uint32_t *id);
 int gsync(Ghandle h, uint32_t id, struct gdev_time *timeout);
 int gbarrier(Ghandle h);
 int gquery(Ghandle h, uint32_t type, uint64_t *result);
