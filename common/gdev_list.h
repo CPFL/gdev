@@ -106,7 +106,14 @@ static inline void *gdev_list_container(struct gdev_list *entry)
 
 #define gdev_list_for_each(p, list, entry_name)				\
 	for (p = gdev_list_container(gdev_list_head(list));		\
-		 p != NULL;											\
+		 p != NULL;						\
 		 p = gdev_list_container((p)->entry_name.next))
+
+
+#define gdev_list_for_each_safe(p, tmp, list, entry_name)		\
+	for (p = gdev_list_container(gdev_list_head(list)),		\
+		tmp = (p != NULL) ? gdev_list_container((p)->entry_name.next) : NULL; \
+		p != NULL;						\
+		p = tmp, tmp = (p != NULL) ? gdev_list_container((p)->entry_name.next) : NULL) \
 
 #endif
