@@ -168,10 +168,46 @@ static int gdev_nvc0_launch(struct gdev_ctx *ctx, struct gdev_stream* stream, st
 			for (i = 0; i < 0x20; i++) {
 				__gdev_out_ring(ctx, 0); /* CB_DATA#0 */
 			}
-			__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x238c, 1);
-			__gdev_out_ring(ctx, 0x100); /* CB_POS */
-			__gdev_begin_ring_nvc0_const(ctx, GDEV_SUBCH_NV_COMPUTE, 0x2390, 1);
-			__gdev_out_ring(ctx, 0x00fffc40); /* CB_DATA#0 */
+
+			{
+				__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x238c, 1);
+				__gdev_out_ring(ctx, 0x100); /* CB_POS */
+				__gdev_begin_ring_nvc0_const(ctx, GDEV_SUBCH_NV_COMPUTE, 0x2390, 1);
+				__gdev_out_ring(ctx, 0x00fffc40); /* CB_DATA#0 */
+			}
+
+			{
+				__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x238c, 1);
+				__gdev_out_ring(ctx, 0x80); /* CB_POS */
+				__gdev_begin_ring_nvc0_const(ctx, GDEV_SUBCH_NV_COMPUTE, 0x2390, 24);
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, 0x0); /* CB_DATA#0 */
+
+				__gdev_out_ring(ctx, k->cmem[0].addr >> 32); /* CB_DATA#0 */
+				__gdev_out_ring(ctx, k->cmem[0].addr); /* CB_DATA#0 */
+			}
 		}
 	}
 
@@ -207,7 +243,7 @@ static int gdev_nvc0_launch(struct gdev_ctx *ctx, struct gdev_stream* stream, st
 
 	/* launch preliminary setup. */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x780, 1);
-	__gdev_out_ring(ctx, ctx->grid_id++); /* GRIDID */
+	__gdev_out_ring(ctx, ++ctx->launch_id); /* GRIDID */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x36c, 1);
 	if (!stream) {
 		__gdev_out_ring(ctx, 0); /* ??? */
@@ -418,7 +454,7 @@ static void nvc0_init(struct gdev_ctx *ctx)
 	struct gdev_vas *vas = ctx->vas;
 	struct gdev_device *gdev = vas->gdev;
 
-	ctx->grid_id = 0;
+	ctx->launch_id = 0;
 
 	/* initialize the fence values. */
 	for (i = 0; i < GDEV_FENCE_COUNT; i++)
@@ -503,6 +539,9 @@ static void nvc0_init(struct gdev_ctx *ctx)
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x1608, 2);
 	__gdev_out_ring(ctx, 0x0); /* CODE_ADDRESS_HIGH */
 	__gdev_out_ring(ctx, 0x0); /* CODE_ADDRESS_LOW */
+
+	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x308, 1);
+	__gdev_out_ring(ctx, 3); /* CACHE_SPLIT */
 
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x1698, 1);
 	__gdev_out_ring(ctx, 0x0001); /* FLUSH: 0x0001 = FLUSH_CODE */

@@ -1008,8 +1008,10 @@ CUresult gdev_cuda_construct_kernels
 		if (k->cmem[1].size == 0) {
 			k->cmem[1].size = 0x10000;
 		}
-		if (k->cmem[15].size == 0) {
-			k->cmem[15].size = 0x10000;
+		if (!(chipset & 0xc0)) {
+			if (k->cmem[15].size == 0) {
+				k->cmem[15].size = 0x10000;
+			}
 		}
 		if (k->cmem[17].size == 0) {
 			k->cmem[17].size = k->cmem[0].size;

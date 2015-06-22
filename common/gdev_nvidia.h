@@ -175,7 +175,7 @@ struct gdev_ctx {
 	    uint32_t *map;
 	    uint32_t addr;
 	} desc; /* compute desc struct. But really, need to structure for each launch grid */
-	uint32_t grid_id; /* launched grid id counter. */
+	uint32_t launch_id; /* launched grid id counter. */
 };
 
 /**

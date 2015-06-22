@@ -759,7 +759,7 @@ Gstream gstream_open(Ghandle h)
 		GDEV_PRINT("Failed to allocate stream\n");
 		goto fail_allocate_id;
 	}
-	stream->stream_id = ++h->nr_streams;
+	stream->stream_id = h->nr_streams++;
 	gdev_list_init(&stream->list_entry, stream);
 	gdev_list_add(&stream->list_entry, &h->stream_list);
 
