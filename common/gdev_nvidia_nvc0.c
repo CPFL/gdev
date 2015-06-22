@@ -83,10 +83,11 @@ static void __nvc0_launch_debug_print(struct gdev_kernel *kernel)
 }
 #endif
 
-static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
+static int gdev_nvc0_launch(struct gdev_ctx *ctx, struct gdev_stream* stream, struct gdev_kernel *k)
 {
 	int x;
 	uint32_t cache_split;
+	int is_async = !!stream;
 
 	/* setup cache_split so that it'll allow 3 blocks (16 warps each) per 
 	   SM for maximum occupancy. */
@@ -115,16 +116,10 @@ static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
 	__gdev_out_ring(ctx, cache_split); /* CACHE_SPLIT */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x214, 1);
 	__gdev_out_ring(ctx, k->smem_base); /* SHARED_BASE */
-	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x24c, 1);
-	__gdev_out_ring(ctx, k->smem_size); /* SHARED_SIZE */
 
 	/* code flush, i.e., code needs to be uploaded in advance. */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x1698, 1);
 	__gdev_out_ring(ctx, 0x0001); /* FLUSH: 0x0001 = FLUSH_CODE */
-
-	/* code setup. */
-	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x3b4, 1);
-	__gdev_out_ring(ctx, (k->code_addr + k->code_pc)); /* CP_START_ID */
 
 	/* constant memory setup. this is a bit tricky:
 	   we set the constant memory size and address first. we next set
@@ -191,20 +186,34 @@ static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x3ac, 2);
 	__gdev_out_ring(ctx, (k->block_y << 16) | k->block_x); /* BLOCKDIM_YX */
 	__gdev_out_ring(ctx, k->block_z); /* BLOCKDIM_X */
+
+	/* code setup. */
+	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x3b4, 1);
+	__gdev_out_ring(ctx, (k->code_addr + k->code_pc)); /* CP_START_ID */
+
+	/* threads alloc */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x250, 1);
 	__gdev_out_ring(ctx, k->block_x * k->block_y * k->block_z); /* TH_ALLOC */
 
 	/* barriers/registers setup. */
-	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x2c0, 1);
-	__gdev_out_ring(ctx, k->reg_count); /* CP_GPR_ALLOC */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x254, 1);
 	__gdev_out_ring(ctx, k->bar_count); /* BARRIER_ALLOC */
-	
+	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x2c0, 1);
+	__gdev_out_ring(ctx, k->reg_count); /* CP_GPR_ALLOC */
+
+	/* shared memory alloc */
+	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x24c, 1);
+	__gdev_out_ring(ctx, k->smem_size); /* SHARED_SIZE */
+
 	/* launch preliminary setup. */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x780, 1);
 	__gdev_out_ring(ctx, ctx->grid_id++); /* GRIDID */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x36c, 1);
-	__gdev_out_ring(ctx, 0); /* ??? */
+	if (!stream) {
+		__gdev_out_ring(ctx, 0); /* ??? */
+	} else {
+		__gdev_out_ring(ctx, stream->stream_id); /* ??? */
+	}
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x1698, 1);
 	__gdev_out_ring(ctx, 0x0110); /* FLUSH: 0x110 = FLUSH_UNK8 | FLUSH_GLOBAL */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x29c, 1);
@@ -217,8 +226,11 @@ static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
 	__gdev_out_ring(ctx, 0x1000 /* 0x0 */); /* LAUNCH */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0xa04, 1);
 	__gdev_out_ring(ctx, 0); /* END */
-	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x360, 1);
-	__gdev_out_ring(ctx, 1); /* ??? */
+
+	if (!is_async) {
+		__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x360, 1);
+		__gdev_out_ring(ctx, 1); /* ??? */
+	}
 
 	__gdev_fire_ring(ctx);
 
@@ -498,8 +510,19 @@ static void nvc0_init(struct gdev_ctx *ctx)
 	__gdev_fire_ring(ctx);
 }
 
+static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
+{
+	return gdev_nvc0_launch(ctx, NULL, k);
+}
+
+static int nvc0_launch_async(struct gdev_ctx *ctx, struct gdev_stream* stream, struct gdev_kernel *k)
+{
+	return gdev_nvc0_launch(ctx, stream, k);
+}
+
 static struct gdev_compute gdev_compute_nvc0 = {
 	.launch = nvc0_launch,
+	.launch_async = nvc0_launch_async,
 	.fence_read = nvc0_fence_read,
 	.fence_write = nvc0_fence_write,
 	.fence_reset = nvc0_fence_reset,

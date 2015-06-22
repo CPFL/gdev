@@ -199,10 +199,19 @@ struct gdev_mem {
 };
 
 /**
+ * stream struct:
+ */
+struct gdev_stream {
+       struct gdev_list list_entry; /* entry to stream list. */
+       uint32_t stream_id; /* stream id. */
+};
+
+/**
  * private compute functions. 
  */
 struct gdev_compute {
 	int (*launch)(struct gdev_ctx *, struct gdev_kernel *);
+	int (*launch_async)(struct gdev_ctx *, struct gdev_stream*, struct gdev_kernel *);
 	uint32_t (*fence_read)(struct gdev_ctx *, uint32_t);
 	void (*fence_write)(struct gdev_ctx *, int, uint32_t);
 	void (*fence_reset)(struct gdev_ctx *, uint32_t);

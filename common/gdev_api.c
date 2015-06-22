@@ -37,15 +37,6 @@
 struct gdev_handle;
 
 /**
- * Gdev stream struct: not visible to outside.
- */
-struct gdev_stream {
-	struct gdev_handle* handle; /* gdev handle reference. */
-	struct gdev_list list_entry; /* entry to stream list. */
-	uint32_t stream_id; /* stream id. */
-};
-
-/**
  * Gdev handle struct: not visible to outside.
  */
 struct gdev_handle {
