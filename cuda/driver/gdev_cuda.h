@@ -187,6 +187,7 @@ struct CUevent_st {
 
 struct CUstream_st {
 	Ghandle gdev_handle;
+	Gstream gdev_stream;
 	struct CUctx_st *ctx;
 	struct gdev_list sync_list; /* for gdev_cuda_fence.list_entry */
 	struct gdev_list event_list;

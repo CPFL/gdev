@@ -46,6 +46,7 @@ CUresult cuStreamCreate(CUstream *phStream, unsigned int Flags)
 	CUresult res;
 	struct CUctx_st *ctx;
 	struct CUstream_st *stream;
+	Gstream gdev_stream;
 	Ghandle handle;
 	int minor;
 
@@ -71,16 +72,24 @@ CUresult cuStreamCreate(CUstream *phStream, unsigned int Flags)
 		goto fail_gopen;
 	}
 
+	if (!(gdev_stream = gstream_open(ctx->gdev_handle))) {
+		res = CUDA_ERROR_UNKNOWN;
+		goto fail_gstream;
+	}
+
 	stream->gdev_handle = handle;
+	stream->gdev_stream = gdev_stream;
 	stream->ctx = ctx;
-	gdev_list_init(&stream->sync_list, NULL);	
-	gdev_list_init(&stream->event_list, NULL);	
+	gdev_list_init(&stream->sync_list, NULL);
+	gdev_list_init(&stream->event_list, NULL);
 	stream->wait = 0;
 
 	*phStream = stream;
 
 	return CUDA_SUCCESS;
 
+fail_gstream:
+	gclose(handle);
 fail_gopen:
 	return res;
 }

@@ -38,12 +38,15 @@
 
 /* Gdev handle members are not exposed to users. */
 typedef struct gdev_handle* Ghandle;
+typedef struct gdev_stream* Gstream;
 
 /**
  * Gdev APIs:
  */
 Ghandle gopen(int minor);
 int gclose(Ghandle h);
+Gstream gstream_open(Ghandle h);
+int gstream_close(Gstream stream);
 uint64_t gmalloc(Ghandle h, uint64_t size);
 uint64_t gfree(Ghandle h, uint64_t addr);
 void *gmalloc_dma(Ghandle h, uint64_t size);

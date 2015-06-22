@@ -33,6 +33,18 @@
 #define __max(x, y) (x) > (y) ? (x) : (y)
 #define __min(x, y) (x) < (y) ? (x) : (y)
 
+/* Forward declarations. */
+struct gdev_handle;
+
+/**
+ * Gdev stream struct: not visible to outside.
+ */
+struct gdev_stream {
+	struct gdev_handle* handle; /* gdev handle reference. */
+	struct gdev_list list_entry; /* entry to stream list. */
+	uint32_t stream_id; /* stream id. */
+};
+
 /**
  * Gdev handle struct: not visible to outside.
  */
@@ -45,6 +57,8 @@ struct gdev_handle {
 	uint32_t chunk_size; /* configurable memcpy chunk size. */
 	int pipeline_count; /* configurable memcpy pipeline count. */
 	int dev_id; /* device ID. */
+	struct gdev_list stream_list; /* stream list */
+	uint32_t nr_streams; /* previously allocated streams. */
 };
 
 static gdev_mem_t** __malloc_dma(gdev_vas_t *vas, uint64_t size, int p_count)
@@ -660,6 +674,9 @@ struct gdev_handle *gopen(int minor)
 	h->gdev = gdev;
 	h->dev_id = minor;
 
+	gdev_list_init(&h->stream_list, NULL);
+	h->nr_streams = 0;
+
 	GDEV_PRINT("Opened gdev%d\n", minor);
 
 	return h;
@@ -712,7 +729,16 @@ int gclose(struct gdev_handle *h)
 	/* free the objects. */
 	gdev_ctx_free(h->ctx);
 	gdev_vas_free(h->vas);
-	
+
+	/* free streams. */
+	{
+		struct gdev_stream *stream, *tmp;
+		gdev_list_for_each_safe(stream, tmp, &h->stream_list, list_entry) {
+			gdev_list_del(&stream->list_entry);
+			FREE(stream);
+		}
+	}
+
 	gdev_block_end(gdev);
 	
 	gdev_dev_close(h->gdev);
@@ -721,6 +747,47 @@ int gclose(struct gdev_handle *h)
 
 	FREE(h);
 
+	return 0;
+}
+
+/**
+ * gstream_open():
+ * allocate new stream.
+ */
+Gstream gstream_open(Ghandle h)
+{
+	struct gdev_stream* stream = NULL;
+
+	if (!(stream = MALLOC(sizeof(*stream)))) {
+		GDEV_PRINT("Failed to allocate stream\n");
+		goto fail_malloc;
+	}
+	memset(stream, 0, sizeof(*stream));
+
+	if (h->nr_streams == UINT32_MAX) {
+		GDEV_PRINT("Failed to allocate stream\n");
+		goto fail_allocate_id;
+	}
+	stream->stream_id = ++h->nr_streams;
+	gdev_list_init(&stream->list_entry, stream);
+	gdev_list_add(&stream->list_entry, &h->stream_list);
+
+	return stream;
+
+fail_allocate_id:
+	FREE(stream);
+fail_malloc:
+	return NULL;
+}
+
+/**
+ * gstream_close():
+ * destroy the stream.
+ */
+int gstream_close(Gstream stream)
+{
+	gdev_list_del(&stream->list_entry);
+	FREE(stream);
 	return 0;
 }
 
