@@ -45,6 +45,7 @@
 #define GDEV_SUBCH_NV_PCOPY0 (GDEV_OP_MEMCPY_ASYNC) /* 3 */
 #define GDEV_SUBCH_NV_PCOPY1 (GDEV_SUBCH_NV_PCOPY0 + 1) /* 4 */
 #define GDEV_SUBCH_NV_PCOPY2 (GDEV_SUBCH_NV_PCOPY0 + 2) /* 5 */
+#define GDEV_SUBCH_NV_SW (GDEV_OP_SW) /* 7 */
 
 #define GDEV_FENCE_BUF_SIZE 0x10000 /* 64KB */
 #define GDEV_FENCE_QUERY_SIZE 0x10 /* aligned with nvc0's query */

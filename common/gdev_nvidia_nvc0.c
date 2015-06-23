@@ -102,22 +102,6 @@ static int setup_handler(struct gdev_mem *handler)
 	return 0;
 }
 
-/* From mesa. */
-#define NVC0_GRAPH_SCRATCH(i0)				       (0x00003400 + 0x4*(i0))
-#define NVC0_GRAPH_SCRATCH__ESIZE				0x00000004
-#define NVC0_GRAPH_SCRATCH__LEN					0x00000080
-
-#define NVC0_COMPUTE_FIRMWARE(i0)			       (0x00000500 + 0x4*(i0))
-#define NVC0_COMPUTE_FIRMWARE__ESIZE				0x00000004
-#define NVC0_COMPUTE_FIRMWARE__LEN				0x00000020
-static void __gdev_out_ring_write_reg(struct gdev_ctx *ctx, uint32_t subchan, uint32_t addr, uint32_t value)
-{
-	__gdev_begin_ring_nvc0(ctx, subchan, NVC0_GRAPH_SCRATCH(1), 1);
-	__gdev_out_ring(ctx, value); /* SCRATCH(0) */
-	__gdev_begin_ring_nvc0(ctx, subchan, NVC0_COMPUTE_FIRMWARE(1), 1);
-	__gdev_out_ring(ctx, addr); /* FIRMWARE(0) */
-}
-
 static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
 {
 	int x;
@@ -176,6 +160,20 @@ static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
 	__gdev_out_ring(ctx, k->smem_base); /* SHARED_BASE */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x24c, 1);
 	__gdev_out_ring(ctx, k->smem_size); /* SHARED_SIZE */
+
+	/* register handler. */
+	if (ctx->handler) {
+		int32_t handler_offset = (int32_t)(ctx->handler->addr - k->code_addr);
+
+		if (nva_init())
+			return -ENODEV;
+
+		__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_SW, 0x0610, 1);
+		__gdev_out_ring(ctx, 0x1); /* SW mthd 0x0610, MP.BPT_CONTROL */
+		__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_SW, 0x0658, 1);
+		__gdev_out_ring(ctx, handler_offset); /* SW mthd 0x0610, MP.TRAP_HANDLER_PC */
+		GDEV_PRINT("HANDLER SET\n");
+	}
 
 	/* code flush, i.e., code needs to be uploaded in advance. */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x1698, 1);
@@ -273,58 +271,6 @@ static int nvc0_launch(struct gdev_ctx *ctx, struct gdev_kernel *k)
 	__gdev_out_ring(ctx, 0); /* BEGIN */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0xa08, 1);
 	__gdev_out_ring(ctx, 0); /* ??? */
-
-	/* register handler. */
-	if (ctx->handler) {
-		int32_t handler_offset = (int32_t)(ctx->handler->addr - k->code_addr);
-
-		if (nva_init())
-			return -ENODEV;
-		{
-			unsigned gpc_base = 0x418000;
-			unsigned tpc_base = gpc_base + 0x1800;
-			unsigned mp_base = tpc_base + 0x600;
-			/* FIXME: handler_offset may exceed 32bit range. */
-			GDEV_PRINT("code:(%" PRIx64 "),handler:(%" PRIx64 "),offset(%" PRIx32 ")\n", k->code_addr, ctx->handler->addr, handler_offset);
-			/* enable debugging. */
-			__gdev_out_ring_write_reg(ctx, GDEV_SUBCH_NV_COMPUTE, mp_base + 0x10, 0x1);
-			/* register handler. */
-			__gdev_out_ring_write_reg(ctx, GDEV_SUBCH_NV_COMPUTE, mp_base + 0x58, handler_offset);
-		}
-
-		{
-			unsigned i, j;
-
-			unsigned gpcs  = nva_rd32(0, 0x409604) & 0xff;
-			for (i = 0; i < gpcs; ++i) {
-				unsigned gpc_base = 0x500000 + 0x8000 * i;
-				unsigned tpcs = nva_rd32(0, 0x502608 + i * 0x8000) & 0xff;
-				for (j = 0; j < tpcs; ++j) {
-					unsigned tpc_base = gpc_base + 0x4000 + 0x800 * j;
-					unsigned mp_base = tpc_base + 0x600;
-					/* enable debugging. */
-					__gdev_out_ring_write_reg(ctx, GDEV_SUBCH_NV_COMPUTE, mp_base + 0x10, 0x1);
-					/* register handler. */
-					__gdev_out_ring_write_reg(ctx, GDEV_SUBCH_NV_COMPUTE, mp_base + 0x58, handler_offset);
-					GDEV_PRINT("BPT:(%x),HANDLE:(%x)\n", nva_rd32(0, mp_base + 0x10), nva_rd32(0, mp_base + 0x58));
-
-				}
-			}
-			GDEV_PRINT("\n");
-			__gdev_fire_ring(ctx);
-
-			for (i = 0; i < gpcs; ++i) {
-				unsigned gpc_base = 0x500000 + 0x8000 * i;
-				unsigned tpcs = nva_rd32(0, 0x502608 + i * 0x8000) & 0xff;
-				for (j = 0; j < tpcs; ++j) {
-					unsigned tpc_base = gpc_base + 0x4000 + 0x800 * j;
-					unsigned mp_base = tpc_base + 0x600;
-					GDEV_PRINT("BPT:(%x),HANDLE:(%x)\n", nva_rd32(0, mp_base + 0x10), nva_rd32(0, mp_base + 0x58));
-				}
-			}
-		}
-		GDEV_PRINT("HANDLER SET\n");
-	}
 
 	/* kernel lauching. */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0x368, 1);
@@ -534,6 +480,8 @@ static void nvc0_init(struct gdev_ctx *ctx)
 	__gdev_out_ring(ctx, 0x9039); /* M2MF */
 	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_COMPUTE, 0, 1);
 	__gdev_out_ring(ctx, 0x90c0); /* COMPUTE */
+	__gdev_begin_ring_nvc0(ctx, GDEV_SUBCH_NV_SW, 0, 1);
+	__gdev_out_ring(ctx, 0x001f0000); /* SW */
 
 	/* enable PCOPY only when we are in the kernel atm... */
 #ifdef __KERNEL__

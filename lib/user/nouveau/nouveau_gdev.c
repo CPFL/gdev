@@ -44,6 +44,7 @@ struct gdev_device *lgdev; /* local gdev_device structure for user-space schedul
 struct gdev_nouveau_ctx_objects {
 	struct nouveau_object *comp;
 	struct nouveau_object *m2mf;
+	struct nouveau_object *nvsw;
 };
 
 void __nouveau_fifo_space(struct gdev_ctx *ctx, uint32_t len)
@@ -396,6 +397,8 @@ struct gdev_ctx *gdev_raw_ctx_new(struct gdev_device *gdev, struct gdev_vas *vas
 	struct gdev_nouveau_ctx_objects *ctx_objects;
 	struct nouveau_object *m2mf;
 	uint32_t m2mf_class = 0;
+	struct nouveau_object *nvsw;
+	uint32_t nvsw_handle = 0;
 #if 1 /* un-necessary */
 	struct nouveau_object *comp;
 	uint32_t comp_class = 0;
@@ -489,17 +492,28 @@ struct gdev_ctx *gdev_raw_ctx_new(struct gdev_device *gdev, struct gdev_vas *vas
 	if ((gdev->chipset & 0xf0) < 0xc0){
 		m2mf_class = 0x5039;
 		comp_class = 0x50c0;
+		nvsw_handle = 0;
 	}else if ((gdev->chipset & 0xf0) < 0xe0){
 		m2mf_class = 0x9039;
 		comp_class = 0x90c0;
+		nvsw_handle = 0x1f906e;
 	}else if ((gdev->chipset & 0xf0) < 0xf0){
 	    	m2mf_class = 0xa040; /* NVE0 P2MF  */
 		comp_class = 0xa0c0; /* NVE0 COMPUTE */
+		nvsw_handle = 0x906e;
 	}else{
 	    	m2mf_class = 0xa140; /* NVF0 P2MF  */
 		comp_class = 0xa1c0; /* NVF0 COMPUTE */
+		nvsw_handle = 0x906e;
 	}/* XXX: case of 'NV108'  */
-	
+
+	/* allocating PGRAPH context for SW (for GF100~ only) */
+	if (nvsw_handle) {
+		if (nouveau_object_new(chan, (gdev->chipset < 0xe0) ? 0x1f906e : 0x906e, 0x906e, NULL, 0, &nvsw))
+			goto fail_nvsw;
+		ctx_objects->nvsw = nvsw;
+	}
+
 	/* allocating PGRAPH context for M2MF */
 	if (nouveau_object_new(chan, 0xbeef323f, m2mf_class, NULL, 0, &m2mf))
 		goto fail_m2mf;
@@ -550,6 +564,9 @@ fail_desc:
 fail_comp:
 	nouveau_object_del(&m2mf);
 fail_m2mf:
+	if (nvsw)
+		nouveau_object_del(&nvsw);
+fail_nvsw:
 	free(ctx_objects);
 fail_ctx_objects:
 	nouveau_bo_ref(NULL, &notify_bo);
@@ -600,6 +617,8 @@ void gdev_raw_ctx_free(struct gdev_ctx *ctx)
 	 */
 	/* nouveau_object_del(&ctx_objects->comp); */
 	nouveau_object_del(&ctx_objects->m2mf);
+	if (ctx_objects->nvsw)
+		nouveau_object_del(&ctx_objects->nvsw);
 	free(ctx_objects);
 	free(ctx);
 }

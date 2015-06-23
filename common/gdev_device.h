@@ -44,6 +44,7 @@
 #define GDEV_OP_COMPUTE 1
 #define GDEV_OP_MEMCPY 2
 #define GDEV_OP_MEMCPY_ASYNC 3
+#define GDEV_OP_SW 7
 
 /**
  * Gdev device struct:
