@@ -26,6 +26,7 @@
 
 #include "cuda.h"
 #include "gdev_cuda.h"
+#include "gdev_io_memcpy.h"
 #ifdef __KERNEL__
 #include <linux/errno.h>
 #else
@@ -992,7 +993,7 @@ CUresult gdev_cuda_construct_kernels
 		/* the following c[] setup is NVIDIA's nvcc-specific. */
 		k->cmem_count = GDEV_NVIDIA_CONST_SEGMENT_MAX_COUNT;
 		/* c0[] is a parameter list. */
-		memcpy(k->param_buf, f->cmem[0].buf, f->param_base);
+		gdev_io_memcpy(k->param_buf, f->cmem[0].buf, f->param_base);
 		if (f->param_size > 0)
 			k->cmem[0].size = gdev_cuda_align_cmem_size(f->param_size + cmem_size_align);
 		else
@@ -1170,7 +1171,7 @@ CUresult gdev_cuda_memcpy_code(struct CUmod_st *mod, void *buf)
 	for (i = 0; i < GDEV_NVIDIA_CONST_SEGMENT_MAX_COUNT; i++) {
 		if (mod->cmem[i].buf) {
 			offset = mod->cmem[i].addr - addr;
-			memcpy(buf + offset, mod->cmem[i].buf, mod->cmem[i].raw_size);
+			gdev_io_memcpy(buf + offset, mod->cmem[i].buf, mod->cmem[i].raw_size);
 		}
 	}
 
@@ -1179,12 +1180,12 @@ CUresult gdev_cuda_memcpy_code(struct CUmod_st *mod, void *buf)
 		f = &func->raw_func;
 		if (f->code_buf) {
 			offset = k->code_addr - addr;
-			memcpy(buf + offset, f->code_buf, f->code_size);
+			gdev_io_memcpy(buf + offset, f->code_buf, f->code_size);
 		}
 		for (i = 0; i < GDEV_NVIDIA_CONST_SEGMENT_MAX_COUNT; i++) {
 			if (f->cmem[i].buf) {
 				offset = k->cmem[i].addr - addr;
-				memcpy(buf + offset, f->cmem[i].buf, f->cmem[i].size);
+				gdev_io_memcpy(buf + offset, f->cmem[i].buf, f->cmem[i].size);
 			}
 		}
 	}
