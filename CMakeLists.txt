@@ -36,6 +36,9 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_BINARY_DIR})
 
 IF(user)
     INCLUDE_DIRECTORY_IF_EXISTS(/usr/local/include/libdrm)
+    INCLUDE_DIRECTORY_IF_EXISTS(/usr/local/include/libdrm/nouveau)
+    INCLUDE_DIRECTORY_IF_EXISTS(/usr/include/libdrm)
+    INCLUDE_DIRECTORY_IF_EXISTS(/usr/include/libdrm/nouveau)
     LINK_DIRECTORY_IF_EXISTS(/usr/local/lib)
 ENDIF()
 
