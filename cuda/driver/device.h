@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2011 Shinpei Kato
  * Copyright (C) 2013 AXE, Inc.
+ * Copyright (C) 2017 Yusuke Suzuki <yusuke.suzuki@sslab.ics.keio.ac.jp>
  *
  * Systems Research Lab, University of California at Santa Cruz
  * All Rights Reserved.
@@ -348,6 +349,7 @@ static struct device_properties device_list[] = {
     {0x1020, "NVIDIA Tesla K20X",		0,	0,	0,	},
     {0x1021, "NVIDIA Tesla K20Xm",		0,	0,	0,	},
     {0x1022, "NVIDIA Tesla K20c",		0,	0,	0,	},
+    {0x1024, "NVIDIA Tesla K40c",		15,	384,	0,	},
     {0x1026, "NVIDIA Tesla K20s",		0,	0,	0,	},
     {0x1028, "NVIDIA Tesla K20m",		0,	0,	0,	},
     {0x1040, "NVIDIA GeForce GT 520 ",		1,	64,	0,	},

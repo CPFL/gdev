@@ -177,6 +177,7 @@ CUresult cuCtxCreate_v2(CUcontext *pctx, unsigned int flags, CUdevice dev)
 	default:
 		cuda_info->warp_count = 48;
 		cuda_info->warp_size = 32;
+		break;
 	}
 
 	*pctx = ctx;
