@@ -30,8 +30,8 @@
 #include "gdev_device.h"
 #include "gdev_sched.h"
 
-#define __max(x, y) (x) > (y) ? (x) : (y)
-#define __min(x, y) (x) < (y) ? (x) : (y)
+#define gdev_max(x, y) (x) > (y) ? (x) : (y)
+#define gdev_min(x, y) (x) < (y) ? (x) : (y)
 
 /**
  * Gdev handle struct: not visible to outside.
@@ -132,7 +132,7 @@ static int __gmemcpy_to_device_p(gdev_ctx_t *ctx, uint64_t dst_addr, const void 
 	offset = 0;
 	for (;;) {
 		for (i = 0; i < p_count; i++) {
-			dma_size = __min(rest_size, ch_size);
+			dma_size = gdev_min(rest_size, ch_size);
 			/* HtoH */
 			if (fence[i])
 				gdev_poll(ctx, fence[i], NULL);
@@ -175,7 +175,7 @@ static int __gmemcpy_to_device_np(gdev_ctx_t *ctx, uint64_t dst_addr, const void
 	/* copy data by the chunk size. */
 	offset = 0;
 	while (rest_size) {
-		dma_size = __min(rest_size, ch_size);
+		dma_size = gdev_min(rest_size, ch_size);
 		ret = host_copy(dma_buf[0], src_buf + offset, dma_size);
 		if (ret)
 			goto end;
@@ -238,7 +238,7 @@ static int __gmemcpy_to_device_locked(gdev_ctx_t *ctx, uint64_t dst_addr, const 
 	else {
 		/* prepare bounce buffer memory. */
 		if (!dma_mem) {
-			bmem = __malloc_dma(vas, __min(size, ch_size), p_count);
+			bmem = __malloc_dma(vas, gdev_min(size, ch_size), p_count);
 			if (!bmem)
 				return -ENOMEM;
 		}
@@ -328,7 +328,7 @@ static int __gmemcpy_from_device_p(gdev_ctx_t *ctx, void *dst_buf, uint64_t src_
 	/* DtoH for all bounce buffers first. */
 	offset = 0;
 	for (i = 0; i < p_count; i++) {
-		dma_size = __min(rest_size, ch_size);
+		dma_size = gdev_min(rest_size, ch_size);
 		fence[i] = gdev_memcpy(ctx, dma_addr[i], src_addr + offset, dma_size);
 		if (rest_size == dma_size)
 			break;
@@ -342,7 +342,7 @@ static int __gmemcpy_from_device_p(gdev_ctx_t *ctx, void *dst_buf, uint64_t src_
 	/* now start overlapping. */
 	for (;;) {
 		for (i = 0; i < p_count; i++) {
-			dma_size = __min(rest_size, ch_size);
+			dma_size = gdev_min(rest_size, ch_size);
 			/* HtoH */
 			gdev_poll(ctx, fence[i], NULL);
 			ret = host_copy(dst_buf + offset, dma_buf[i], dma_size);
@@ -351,7 +351,7 @@ static int __gmemcpy_from_device_p(gdev_ctx_t *ctx, void *dst_buf, uint64_t src_
 			/* DtoH for the next round if necessary. */
 			if (p_count * ch_size < rest_size) {
 				uint64_t rest_size_n = rest_size - p_count * ch_size;
-				uint32_t dma_size_n = __min(rest_size_n, ch_size);
+				uint32_t dma_size_n = gdev_min(rest_size_n, ch_size);
 				uint64_t offset_n = offset + p_count * ch_size;
 				fence[i] = gdev_memcpy(ctx, dma_addr[i], src_addr + offset_n, dma_size_n);
 			}
@@ -386,7 +386,7 @@ static int __gmemcpy_from_device_np(gdev_ctx_t *ctx, void *dst_buf, uint64_t src
 	/* copy data by the chunk size. */
 	offset = 0;
 	while (rest_size) {
-		dma_size = __min(rest_size, ch_size);
+		dma_size = gdev_min(rest_size, ch_size);
 		fence = gdev_memcpy(ctx, dma_addr[0], src_addr + offset, dma_size);
 		gdev_poll(ctx, fence, NULL);
 		ret = host_copy(dst_buf + offset, dma_buf[0], dma_size);
@@ -449,7 +449,7 @@ static int __gmemcpy_from_device_locked(gdev_ctx_t *ctx, void *dst_buf, uint64_t
 	else {
 		/* prepare bounce buffer memory. */
 		if (!dma_mem) {
-			bmem = __malloc_dma(vas, __min(size, ch_size), p_count);
+			bmem = __malloc_dma(vas, gdev_min(size, ch_size), p_count);
 			if (!bmem)
 				return -ENOMEM;
 		}
