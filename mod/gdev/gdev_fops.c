@@ -36,7 +36,7 @@
 
 static int __get_minor(struct file *filp)
 {
-	char *devname = filp->f_dentry->d_iname;
+	char *devname = filp->f_path.dentry->d_iname;
 	if (strncmp(devname, "gdev", 4) == 0) {
 		char *devnum = devname + 4;
 		return simple_strtoul(devnum, NULL, 10);
