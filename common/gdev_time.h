@@ -32,7 +32,9 @@
 #ifdef __KERNEL__
 #define gettimeofday(x, y) do_gettimeofday(x)
 #include <linux/time.h>
+#include <linux/ktime.h>
 #include <linux/types.h>
+#include <linux/version.h>
 #else
 #include <sys/time.h>
 #include <stdint.h>
@@ -62,10 +64,24 @@ struct gdev_time {
 /* ret = current time */
 static inline void gdev_time_stamp(struct gdev_time *ret)
 {
+#ifdef __KERNEL__
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0)
+	struct timespec ts;
+	getnstimeofday64(&ts);
+	ret->sec = ts.tv_sec;
+	ret->usec = ts.tv_nsec / 1000;
+#else
+	struct timeval tv;
+	do_gettimeofday(&tv);
+	ret->sec = tv.tv_sec;
+	ret->usec = tv.tv_usec;
+#endif
+#else
 	struct timeval tv;
 	gettimeofday(&tv, NULL);
 	ret->sec = tv.tv_sec;
 	ret->usec = tv.tv_usec;
+#endif
 	ret->neg = 0;
 }
 
