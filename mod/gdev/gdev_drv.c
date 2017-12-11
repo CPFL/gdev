@@ -26,15 +26,19 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <asm/uaccess.h>
 #include <linux/cdev.h>
 #include <linux/fs.h>
 #include <linux/kthread.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,9,0)
+#include <linux/sched/types.h>
+#endif
 
 #include "gdev_api.h"
+#include "gdev_compiler.h"
 #include "gdev_conf.h"
 #include "gdev_device.h"
 #include "gdev_drv.h"
@@ -60,7 +64,7 @@ static struct cdev *cdevs; /* character devices for virtual devices */
 /**
  * interrupt notify handler
  */
-static void __gdev_notify_handler(int op, uint32_t data)
+static UNUSED_FUNCTION void __gdev_notify_handler(int op, uint32_t data)
 {
 	struct gdev_device *gdev;
 	struct gdev_sched_entity *se;
