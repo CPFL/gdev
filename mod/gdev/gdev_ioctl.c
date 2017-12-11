@@ -446,7 +446,7 @@ int gdev_ioctl_gshmctl(Ghandle handle, unsigned long arg)
 			return -EFAULT;
 	}
 	else {
-		memset(&ds, sizeof(ds), 0);
+		memset(&ds, 0, sizeof(ds));
 	}
 
 	return gshmctl(handle, s.id, s.cmd, (void *)&ds);
